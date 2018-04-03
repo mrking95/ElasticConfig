@@ -18,8 +18,7 @@ sudo systemctl restart auditbeat
 ```
 
 ## Filebeat
-
-## Metricbeat
+https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-6.2.3-x86_64.zip
 ```
 yum -y install https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-6.2.3-x86_64.rpm
 systemctl enable filebeat
@@ -31,6 +30,31 @@ Download config & change values
 systemctl start filebeat
 ```
 
+## Metricbeat
+https://artifacts.elastic.co/downloads/beats/filebeat/metricbeat-6.2.3-x86_64.zip
+```
+yum -y install https://artifacts.elastic.co/downloads/beats/filebeat/metricbeat-6.2.3-x86_64.rpm
+systemctl enable filebeat
+```
+
+Download config & change values
+
+```
+systemctl start filebeat
+```
+
 ## Auditbeat
+https://artifacts.elastic.co/downloads/beats/filebeat/auditbeat-6.2.3-x86_64.zip
+```
+yum -y install https://artifacts.elastic.co/downloads/beats/filebeat/auditbeat-6.2.3-x86_64.rpm
+systemctl enable filebeat
+```
+
+Download config & change values
+
+```
+systemctl start filebeat
+```
 
 ## Winlogbeat
+https://artifacts.elastic.co/downloads/beats/winlogbeat/winlogbeat-6.2.3-windows-x86_64.zip
