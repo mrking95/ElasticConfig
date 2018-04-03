@@ -33,7 +33,7 @@ systemctl start filebeat
 ## Metricbeat
 https://artifacts.elastic.co/downloads/beats/filebeat/metricbeat-6.2.3-x86_64.zip
 ```
-yum -y install https://artifacts.elastic.co/downloads/beats/filebeat/metricbeat-6.2.3-x86_64.rpm
+yum -y install https://artifacts.elastic.co/downloads/beats/metricbeat/metricbeat-6.2.3-x86_64.rpm
 systemctl enable filebeat
 ```
 
@@ -46,7 +46,7 @@ systemctl start filebeat
 ## Auditbeat
 https://artifacts.elastic.co/downloads/beats/filebeat/auditbeat-6.2.3-x86_64.zip
 ```
-yum -y install https://artifacts.elastic.co/downloads/beats/filebeat/auditbeat-6.2.3-x86_64.rpm
+yum -y install https://artifacts.elastic.co/downloads/beats/auditbeat/auditbeat-6.2.3-x86_64.rpm
 systemctl enable filebeat
 ```
 
