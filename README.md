@@ -9,7 +9,7 @@ Filebeat, Metricbeat, Auditbeat and Winlogbeat configuration
 
 ## Metricbeat
 ```yum -y install https://artifacts.elastic.co/downloads/beats/filebeat/filebeat-6.2.3-x86_64.rpm
-systemctl enable filebeat
+systemctl enable filebeat```
 
 Download config & change values
 
