@@ -1,15 +1,6 @@
 - module: logstash
-  # logs
-  log:
-    enabled: true
+  metricsets: ["node", "node_stats"]
+  enabled: false
+  period: 10s
+  hosts: ["localhost:9600"]
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
-
-  # Slow logs
-  slowlog:
-   enabled: true
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:

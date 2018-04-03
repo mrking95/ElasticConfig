@@ -1,16 +1,5 @@
 - module: nginx
-  # Access logs
-  access:
-    enabled: true
-
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
-
-  # Error logs
-  error:
-    enabled: true
-
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+  metricsets: ["stubstatus"]
+  period: 10s
+  hosts: ["http://127.0.0.1"]
+  server_status_path: "server-status"

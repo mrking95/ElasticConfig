@@ -1,20 +1,13 @@
-#==========================  Modules configuration =============================
-auditbeat.modules:
-- module: auditd
-  audit_rules: |
-
-- module: file_integrity
-  paths:
-  - /bin
-  - /usr/bin
-  - /sbin
-  - /usr/sbin
-  - /etc
+#==========================  Modules configuration ============================
+metricbeat.config.modules:
+  path: ${path.config}/modules.d/*.yml
+  reload.enabled: true
+  reload.period: 10s
 
 #==================== Elasticsearch template setting ==========================
 setup.template.settings:
   index.number_of_shards: 3
-  #index.codec: best_compression
+  index.codec: best_compression
   #_source.enabled: false
 
 #================================ General =====================================
@@ -47,7 +40,7 @@ output.logstash:
   ssl.certificate_authorities: ["/etc/pki/tls/certs/logstash-forwarder.crt"]
 
 #================================ Logging =====================================
-logging.level: error
+logging.level: debug
 #logging.selectors: ["*"]
 
 #============================== Xpack Monitoring ===============================

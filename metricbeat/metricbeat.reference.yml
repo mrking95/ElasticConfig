@@ -1,495 +1,440 @@
-######################## Filebeat Configuration ############################
+########################## Metricbeat Configuration ###########################
 
 # This file is a full configuration example documenting all non-deprecated
 # options in comments. For a shorter configuration example, that contains only
-# the most common options, please see filebeat.yml in the same directory.
+# the most common options, please see metricbeat.yml in the same directory.
 #
 # You can find the full configuration reference here:
-# https://www.elastic.co/guide/en/beats/filebeat/index.html
+# https://www.elastic.co/guide/en/beats/metricbeat/index.html
 
+#============================  Config Reloading ===============================
+
+# Config reloading allows to dynamically load modules. Each file which is
+# monitored must contain one or multiple modules as a list.
+metricbeat.config.modules:
+
+  # Glob pattern for configuration reloading
+  path: ${path.config}/conf.d/*.yml
+
+  # Period on which files under path should be checked for changes
+  reload.period: 10s
+
+  # Set to true to enable config reloading
+  reload.enabled: false
+
+# Maximum amount of time to randomly delay the start of a metricset. Use 0 to
+# disable startup delay.
+metricbeat.max_start_delay: 10s
+
+#============================== Autodiscover ===================================
+
+# Autodiscover allows you to detect changes in the system and spawn new modules
+# as they happen.
+
+#metricbeat.autodiscover:
+  # List of enabled autodiscover providers
+#  providers:
+#    - type: docker
+#      templates:
+#        - condition:
+#            equals.docker.container.image: etcd
+#          config:
+#            - module: etcd
+#              metricsets: ["leader", "self", "store"]
+#              period: 10s
+#              hosts: ["${host}:2379"]
 
 #==========================  Modules configuration ============================
-filebeat.modules:
+metricbeat.modules:
 
 #------------------------------- System Module -------------------------------
-#- module: system
-  # Syslog
-  #syslog:
+- module: system
+  metricsets:
+    - cpu             # CPU usage
+    - filesystem      # File system usage for each mountpoint
+    - fsstat          # File system summary metrics
+    - load            # CPU load averages
+    - memory          # Memory usage
+    - network         # Network IO
+    - process         # Per process metrics
+    - process_summary # Process summary
+    - uptime          # System Uptime
+    #- core           # Per CPU core usage
+    #- diskio         # Disk IO
+    #- socket         # Sockets and connection info (linux only)
+  enabled: true
+  period: 10s
+  processes: ['.*']
+
+  # Configure the metric types that are included by these metricsets.
+  cpu.metrics:  ["percentages"]  # The other available options are normalized_percentages and ticks.
+  core.metrics: ["percentages"]  # The other available option is ticks.
+
+  # A list of filesystem types to ignore. The filesystem metricset will not
+  # collect data from filesystems matching any of the specified types, and
+  # fsstats will not include data from these filesystems in its summary stats.
+  #filesystem.ignore_types: []
+
+  # These options allow you to filter out all processes that are not
+  # in the top N by CPU or memory, in order to reduce the number of documents created.
+  # If both the `by_cpu` and `by_memory` options are used, the union of the two sets
+  # is included.
+  #process.include_top_n:
+    #
+    # Set to false to disable this feature and include all processes
     #enabled: true
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+    # How many processes to include from the top by CPU. The processes are sorted
+    # by the `system.process.cpu.total.pct` field.
+    #by_cpu: 0
 
-    # Convert the timestamp to UTC. Requires Elasticsearch >= 6.1.
-    #var.convert_timezone: false
+    # How many processes to include from the top by memory. The processes are sorted
+    # by the `system.process.memory.rss.bytes` field.
+    #by_memory: 0
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+  # If false, cmdline of a process is not cached.
+  #process.cmdline.cache.enabled: true
 
-  # Authorization logs
-  #auth:
-    #enabled: true
+  # Enable collection of cgroup metrics from processes on Linux.
+  #process.cgroups.enabled: true
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+  # A list of regular expressions used to whitelist environment variables
+  # reported with the process metricset's events. Defaults to empty.
+  #process.env.whitelist: []
 
-    # Convert the timestamp to UTC. Requires Elasticsearch >= 6.1.
-    #var.convert_timezone: false
+  # Include the cumulative CPU tick values with the process metrics. Defaults
+  # to false.
+  #process.include_cpu_ticks: false
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+  # Configure reverse DNS lookup on remote IP addresses in the socket metricset.
+  #socket.reverse_lookup.enabled: false
+  #socket.reverse_lookup.success_ttl: 60s
+  #socket.reverse_lookup.failure_ttl: 60s
 
-#------------------------------- Apache2 Module ------------------------------
-#- module: apache2
-  # Access logs
-  #access:
-    #enabled: true
+#------------------------------ Aerospike Module -----------------------------
+- module: aerospike
+  metricsets: ["namespace"]
+  enabled: false
+  period: 10s
+  hosts: ["localhost:3000"]
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+#------------------------------- Apache Module -------------------------------
+- module: apache
+  metricsets: ["status"]
+  period: 10s
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+  # Apache hosts
+  hosts: ["http://127.0.0.1"]
 
-  # Error logs
-  #error:
-    #enabled: true
+  # Path to server status. Default server-status
+  #server_status_path: "server-status"
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+  # Username of hosts.  Empty by default
+  #username: username
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+  # Password of hosts. Empty by default
+  #password: password
 
-#------------------------------- Auditd Module -------------------------------
-#- module: auditd
-  #log:
-    #enabled: true
+#-------------------------------- Ceph Module --------------------------------
+- module: ceph
+  metricsets: ["cluster_disk", "cluster_health", "monitor_health", "pool_disk", "osd_tree"]
+  period: 10s
+  hosts: ["localhost:5000"]
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+#------------------------------ Couchbase Module -----------------------------
+- module: couchbase
+  metricsets: ["bucket", "cluster", "node"]
+  period: 10s
+  hosts: ["localhost:8091"]
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+#------------------------------- Docker Module -------------------------------
+- module: docker
+  metricsets: ["container", "cpu", "diskio", "healthcheck", "info", "memory", "network"]
+  hosts: ["unix:///var/run/docker.sock"]
+  period: 10s
 
-#------------------------------- Icinga Module -------------------------------
-#- module: icinga
-  # Main logs
-  #main:
-    #enabled: true
+  # To connect to Docker over TLS you must specify a client and CA certificate.
+  #ssl:
+    #certificate_authority: "/etc/pki/root/ca.pem"
+    #certificate:           "/etc/pki/client/cert.pem"
+    #key:                   "/etc/pki/client/cert.key"
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+#----------------------------- Dropwizard Module -----------------------------
+- module: dropwizard
+  metricsets: ["collector"]
+  period: 10s
+  hosts: ["localhost:8080"]
+  metrics_path: /metrics/metrics
+  namespace: example
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+#---------------------------- Elasticsearch Module ---------------------------
+- module: elasticsearch
+  metricsets: ["node", "node_stats"]
+  period: 10s
+  hosts: ["localhost:9200"]
 
-  # Debug logs
-  #debug:
-    #enabled: true
+#-------------------------------- Etcd Module --------------------------------
+- module: etcd
+  metricsets: ["leader", "self", "store"]
+  period: 10s
+  hosts: ["localhost:2379"]
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+#------------------------------- Golang Module -------------------------------
+- module: golang
+  metricsets: ["expvar","heap"]
+  period: 10s
+  hosts: ["localhost:6060"]
+  heap.path: "/debug/vars"
+  expvar:
+    namespace: "example"
+    path: "/debug/vars"
 
-  # Startup logs
-  #startup:
-    #enabled: true
+#------------------------------ Graphite Module ------------------------------
+- module: graphite
+  metricsets: ["server"]
+  enabled: true
+#  protocol: "udp"
+#  templates:
+#    - filter: "test.*.bash.*" # This would match metrics like test.localhost.bash.stats
+#      namespace: "test"
+#      template: ".host.shell.metric*" # test.localhost.bash.stats would become metric=stats and tags host=localhost,shell=bash
+#      delimiter: "_"
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+#------------------------------- HAProxy Module ------------------------------
+- module: haproxy
+  metricsets: ["info", "stat"]
+  period: 10s
+  hosts: ["tcp://127.0.0.1:14567"]
+
+#-------------------------------- HTTP Module --------------------------------
+- module: http
+  metricsets: ["json"]
+  period: 10s
+  hosts: ["localhost:80"]
+  namespace: "json_namespace"
+  path: "/"
+  #body: ""
+  #method: "GET"
+  #request.enabled: false
+  #response.enabled: false
+  #dedot.enabled: false
+
+- module: http
+  metricsets: ["server"]
+  host: "localhost"
+  port: "8080"
+  enabled: false
+#  paths:
+#    - path: "/foo"
+#      namespace: "foo"
+#      fields: # added to the the response in root. overwrites existing fields
+#        key: "value"
+
+#------------------------------- Jolokia Module ------------------------------
+- module: jolokia
+  metricsets: ["jmx"]
+  period: 10s
+  hosts: ["localhost"]
+  namespace: "metrics"
+  path: "/jolokia/?ignoreErrors=true&canonicalNaming=false"
+  jmx.mapping:
+  jmx.application:
+  jmx.instance:
 
 #-------------------------------- Kafka Module -------------------------------
 - module: kafka
-  # All logs
-  log:
-    enabled: true
+  metricsets: ["partition"]
+  period: 10s
+  hosts: ["localhost:9092"]
 
-    # Set custom paths for Kafka. If left empty,
-    # Filebeat will look under /opt.
-    #var.kafka_home:
+  #client_id: metricbeat
+  #retries: 3
+  #backoff: 250ms
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+  # List of Topics to query metadata for. If empty, all topics will be queried.
+  #topics: []
+
+  # Optional SSL. By default is off.
+  # List of root certificates for HTTPS server verifications
+  #ssl.certificate_authorities: ["/etc/pki/root/ca.pem"]
+
+  # Certificate for SSL client authentication
+  #ssl.certificate: "/etc/pki/client/cert.pem"
+
+  # Client Certificate Key
+  #ssl.key: "/etc/pki/client/cert.key"
+
+  # SASL authentication
+  #username: ""
+  #password: ""
+
+#------------------------------- Kibana Module -------------------------------
+- module: kibana
+  metricsets: ["status"]
+  period: 10s
+  hosts: ["localhost:5601"]
+
+#----------------------------- Kubernetes Module -----------------------------
+# Node metrics, from kubelet:
+- module: kubernetes
+  metricsets:
+    - node
+    - system
+    - pod
+    - container
+    - volume
+  period: 10s
+  hosts: ["localhost:10255"]
+
+# State metrics from kube-state-metrics service:
+- module: kubernetes
+  enabled: false
+  metricsets:
+    - state_node
+    - state_deployment
+    - state_replicaset
+    - state_pod
+    - state_container
+  period: 10s
+  hosts: ["kube-state-metrics:8080"]
+
+# Kubernetes events
+- module: kubernetes
+  enabled: false
+  metricsets:
+    - event
+
+#------------------------------ Logstash Module ------------------------------
+- module: logstash
+  metricsets: ["node", "node_stats"]
+  enabled: false
+  period: 10s
+  hosts: ["localhost:9600"]
 
 
-#------------------------------ logstash Module ------------------------------
-#- module: logstash
-  # logs
-  #log:
-    #enabled: true
+#------------------------------ Memcached Module -----------------------------
+- module: memcached
+  metricsets: ["stats"]
+  period: 10s
+  hosts: ["localhost:11211"]
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    # var.paths:
+#------------------------------- MongoDB Module ------------------------------
+- module: mongodb
+  metricsets: ["dbstats", "status"]
+  period: 10s
 
-  # Slow logs
-  #slowlog:
-   #enabled: true
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+  # The hosts must be passed as MongoDB URLs in the format:
+  # [mongodb://][user:pass@]host[:port].
+  # The username and password can also be set using the respective configuration
+  # options. The credentials in the URL take precedence over the username and
+  # password configuration options.
+  hosts: ["localhost:27017"]
+
+  # Username to use when connecting to MongoDB. Empty by default.
+  #username: user
+
+  # Password to use when connecting to MongoDB. Empty by default.
+  #password: pass
 
 #-------------------------------- MySQL Module -------------------------------
-#- module: mysql
-  # Error logs
-  #error:
-    #enabled: true
+- module: mysql
+  metricsets: ["status"]
+  period: 10s
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+  # Host DSN should be defined as "user:pass@tcp(127.0.0.1:3306)/"
+  # The username and password can either be set in the DSN or using the username
+  # and password config options. Those specified in the DSN take precedence.
+  hosts: ["root:secret@tcp(127.0.0.1:3306)/"]
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+  # Username of hosts. Empty by default.
+  #username: root
 
-  # Slow logs
-  #slowlog:
-    #enabled: true
+  # Password of hosts. Empty by default.
+  #password: secret
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
-
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+  # By setting raw to true, all raw fields from the status metricset will be added to the event.
+  #raw: false
 
 #-------------------------------- Nginx Module -------------------------------
 #- module: nginx
-  # Access logs
-  #access:
-    #enabled: true
+  #metricsets: ["stubstatus"]
+  #enabled: true
+  #period: 10s
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+  # Nginx hosts
+  #hosts: ["http://127.0.0.1"]
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+  # Path to server status. Default server-status
+  #server_status_path: "server-status"
 
-  # Error logs
-  #error:
-    #enabled: true
-
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
-
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
-
-#------------------------------- Osquery Module ------------------------------
-- module: osquery
-  result:
-    enabled: true
-
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
-
-    # If true, all fields created by this module are prefixed with
-    # `osquery.result`. Set to false to copy the fields in the root
-    # of the document. The default is true.
-    #var.use_namespace: true
+#------------------------------- PHP_FPM Module ------------------------------
+- module: php_fpm
+  metricsets: ["pool"]
+  period: 10s
+  status_path: "/status"
+  hosts: ["localhost:8080"]
 
 #----------------------------- PostgreSQL Module -----------------------------
-#- module: postgresql
-  # Logs
-  #log:
-    #enabled: true
+- module: postgresql
+  metricsets:
+    # Stats about every PostgreSQL database
+    - database
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
+    # Stats about the background writer process's activity
+    - bgwriter
 
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
+    # Stats about every PostgreSQL process
+    - activity
+
+  period: 10s
+
+  # The host must be passed as PostgreSQL URL. Example:
+  # postgres://localhost:5432?sslmode=disable
+  # The available parameters are documented here:
+  # https://godoc.org/github.com/lib/pq#hdr-Connection_String_Parameters
+  hosts: ["postgres://localhost:5432"]
+
+  # Username to use when connecting to PostgreSQL. Empty by default.
+  #username: user
+
+  # Password to use when connecting to PostgreSQL. Empty by default.
+  #password: pass
+
+#----------------------------- Prometheus Module -----------------------------
+- module: prometheus
+  metricsets: ["stats"]
+  period: 10s
+  hosts: ["localhost:9090"]
+  metrics_path: /metrics
+  #namespace: example
+
+#------------------------------ RabbitMQ Module ------------------------------
+- module: rabbitmq
+  metricsets: ["node", "queue"]
+  period: 10s
+  hosts: ["localhost:15672"]
+
+  username: guest
+  password: guest
 
 #-------------------------------- Redis Module -------------------------------
-#- module: redis
-  # Main logs
-  #log:
-    #enabled: true
+- module: redis
+  metricsets: ["info", "keyspace"]
+  period: 10s
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths: ["/var/log/redis/redis-server.log*"]
+  # Redis hosts
+  hosts: ["127.0.0.1:6379"]
 
-  # Slow logs, retrieved via the Redis API (SLOWLOG)
-  #slowlog:
-    #enabled: true
-
-    # The Redis hosts to connect to.
-    #var.hosts: ["localhost:6379"]
-
-    # Optional, the password to use when connecting to Redis.
-    #var.password:
-
-#------------------------------- Traefik Module ------------------------------
-#- module: traefik
-  # Access logs
-  #access:
-    #enabled: true
-
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    #var.paths:
-
-    # Prospector configuration (advanced). Any prospector configuration option
-    # can be added under this section.
-    #prospector:
-
-
-#=========================== Filebeat prospectors =============================
-
-# List of prospectors to fetch data.
-filebeat.prospectors:
-# Each - is a prospector. Most options can be set at the prospector level, so
-# you can use different prospectors for various configurations.
-# Below are the prospector specific configurations.
-
-# Type of the files. Based on this the way the file is read is decided.
-# The different types cannot be mixed in one prospector
-#
-# Possible options are:
-# * log: Reads every line of the log file (default)
-# * stdin: Reads the standard in
-
-#------------------------------ Log prospector --------------------------------
-- type: log
-
-  # Change to true to enable this prospector configuration.
-  enabled: false
-
-  # Paths that should be crawled and fetched. Glob based paths.
-  # To fetch all ".log" files from a specific level of subdirectories
-  # /var/log/*/*.log can be used.
-  # For each file found under this path, a harvester is started.
-  # Make sure not file is defined twice as this can lead to unexpected behaviour.
-  paths:
-    - /var/log/*.log
-    #- c:\programdata\elasticsearch\logs\*
-
-  # Configure the file encoding for reading files with international characters
-  # following the W3C recommendation for HTML5 (http://www.w3.org/TR/encoding).
-  # Some sample encodings:
-  #   plain, utf-8, utf-16be-bom, utf-16be, utf-16le, big5, gb18030, gbk,
-  #    hz-gb-2312, euc-kr, euc-jp, iso-2022-jp, shift-jis, ...
-  #encoding: plain
-
-
-  # Exclude lines. A list of regular expressions to match. It drops the lines that are
-  # matching any regular expression from the list. The include_lines is called before
-  # exclude_lines. By default, no lines are dropped.
-  #exclude_lines: ['^DBG']
-
-  # Include lines. A list of regular expressions to match. It exports the lines that are
-  # matching any regular expression from the list. The include_lines is called before
-  # exclude_lines. By default, all the lines are exported.
-  #include_lines: ['^ERR', '^WARN']
-
-  # Exclude files. A list of regular expressions to match. Filebeat drops the files that
-  # are matching any regular expression from the list. By default, no files are dropped.
-  #exclude_files: ['.gz$']
-
-  # Optional additional fields. These fields can be freely picked
-  # to add additional information to the crawled log files for filtering
-  #fields:
-  #  level: debug
-  #  review: 1
-
-  # Set to true to store the additional fields as top level fields instead
-  # of under the "fields" sub-dictionary. In case of name conflicts with the
-  # fields added by Filebeat itself, the custom fields overwrite the default
-  # fields.
-  #fields_under_root: false
-
-  # Ignore files which were modified more then the defined timespan in the past.
-  # ignore_older is disabled by default, so no files are ignored by setting it to 0.
-  # Time strings like 2h (2 hours), 5m (5 minutes) can be used.
-  #ignore_older: 0
-
-  # How often the prospector checks for new files in the paths that are specified
-  # for harvesting. Specify 1s to scan the directory as frequently as possible
-  # without causing Filebeat to scan too frequently. Default: 10s.
-  #scan_frequency: 10s
-
-  # Defines the buffer size every harvester uses when fetching the file
-  #harvester_buffer_size: 16384
-
-  # Maximum number of bytes a single log event can have
-  # All bytes after max_bytes are discarded and not sent. The default is 10MB.
-  # This is especially useful for multiline log messages which can get large.
-  #max_bytes: 10485760
-
-  ### Recursive glob configuration
-
-  # Expand "**" patterns into regular glob patterns.
-  #recursive_glob.enabled: true
-
-  ### JSON configuration
-
-  # Decode JSON options. Enable this if your logs are structured in JSON.
-  # JSON key on which to apply the line filtering and multiline settings. This key
-  # must be top level and its value must be string, otherwise it is ignored. If
-  # no text key is defined, the line filtering and multiline features cannot be used.
-  #json.message_key:
-
-  # By default, the decoded JSON is placed under a "json" key in the output document.
-  # If you enable this setting, the keys are copied top level in the output document.
-  #json.keys_under_root: false
-
-  # If keys_under_root and this setting are enabled, then the values from the decoded
-  # JSON object overwrite the fields that Filebeat normally adds (type, source, offset, etc.)
-  # in case of conflicts.
-  #json.overwrite_keys: false
-
-  # If this setting is enabled, Filebeat adds a "error.message" and "error.key: json" key in case of JSON
-  # unmarshaling errors or when a text key is defined in the configuration but cannot
-  # be used.
-  #json.add_error_key: false
-
-  ### Multiline options
-
-  # Mutiline can be used for log messages spanning multiple lines. This is common
-  # for Java Stack Traces or C-Line Continuation
-
-  # The regexp Pattern that has to be matched. The example pattern matches all lines starting with [
-  #multiline.pattern: ^\[
-
-  # Defines if the pattern set under pattern should be negated or not. Default is false.
-  #multiline.negate: false
-
-  # Match can be set to "after" or "before". It is used to define if lines should be append to a pattern
-  # that was (not) matched before or after or as long as a pattern is not matched based on negate.
-  # Note: After is the equivalent to previous and before is the equivalent to to next in Logstash
-  #multiline.match: after
-
-  # The maximum number of lines that are combined to one event.
-  # In case there are more the max_lines the additional lines are discarded.
-  # Default is 500
-  #multiline.max_lines: 500
-
-  # After the defined timeout, an multiline event is sent even if no new pattern was found to start a new event
-  # Default is 5s.
-  #multiline.timeout: 5s
-
-  # Setting tail_files to true means filebeat starts reading new files at the end
-  # instead of the beginning. If this is used in combination with log rotation
-  # this can mean that the first entries of a new file are skipped.
-  #tail_files: false
-
-  # The Ingest Node pipeline ID associated with this prospector. If this is set, it
-  # overwrites the pipeline option from the Elasticsearch output.
-  #pipeline:
-
-  # If symlinks is enabled, symlinks are opened and harvested. The harvester is openening the
-  # original for harvesting but will report the symlink name as source.
-  #symlinks: false
-
-  # Backoff values define how aggressively filebeat crawls new files for updates
-  # The default values can be used in most cases. Backoff defines how long it is waited
-  # to check a file again after EOF is reached. Default is 1s which means the file
-  # is checked every second if new lines were added. This leads to a near real time crawling.
-  # Every time a new line appears, backoff is reset to the initial value.
-  #backoff: 1s
-
-  # Max backoff defines what the maximum backoff time is. After having backed off multiple times
-  # from checking the files, the waiting time will never exceed max_backoff independent of the
-  # backoff factor. Having it set to 10s means in the worst case a new line can be added to a log
-  # file after having backed off multiple times, it takes a maximum of 10s to read the new line
-  #max_backoff: 10s
-
-  # The backoff factor defines how fast the algorithm backs off. The bigger the backoff factor,
-  # the faster the max_backoff value is reached. If this value is set to 1, no backoff will happen.
-  # The backoff value will be multiplied each time with the backoff_factor until max_backoff is reached
-  #backoff_factor: 2
-
-  # Max number of harvesters that are started in parallel.
-  # Default is 0 which means unlimited
-  #harvester_limit: 0
-
-  ### Harvester closing options
-
-  # Close inactive closes the file handler after the predefined period.
-  # The period starts when the last line of the file was, not the file ModTime.
-  # Time strings like 2h (2 hours), 5m (5 minutes) can be used.
-  #close_inactive: 5m
-
-  # Close renamed closes a file handler when the file is renamed or rotated.
-  # Note: Potential data loss. Make sure to read and understand the docs for this option.
-  #close_renamed: false
-
-  # When enabling this option, a file handler is closed immediately in case a file can't be found
-  # any more. In case the file shows up again later, harvesting will continue at the last known position
-  # after scan_frequency.
-  #close_removed: true
-
-  # Closes the file handler as soon as the harvesters reaches the end of the file.
-  # By default this option is disabled.
-  # Note: Potential data loss. Make sure to read and understand the docs for this option.
-  #close_eof: false
-
-  ### State options
-
-  # Files for the modification data is older then clean_inactive the state from the registry is removed
-  # By default this is disabled.
-  #clean_inactive: 0
-
-  # Removes the state for file which cannot be found on disk anymore immediately
-  #clean_removed: true
-
-  # Close timeout closes the harvester after the predefined time.
-  # This is independent if the harvester did finish reading the file or not.
-  # By default this option is disabled.
-  # Note: Potential data loss. Make sure to read and understand the docs for this option.
-  #close_timeout: 0
-
-  # Defines if prospectors is enabled
-  #enabled: true
-
-#----------------------------- Stdin prospector -------------------------------
-# Configuration to use stdin input
-#- type: stdin
-
-#------------------------- Redis slowlog prospector ---------------------------
-# Experimental: Config options for the redis slow log prospector
-#- type: redis
-  #hosts: ["localhost:6379"]
-  #username:
-  #password:
-  #enabled: false
-  #scan_frequency: 10s
-
-  # Timeout after which time the prospector should return an error
+  # Timeout after which time a metricset should return an error
+  # Timeout is by default defined as period, as a fetch of a metricset
+  # should never take longer then period, as otherwise calls can pile up.
   #timeout: 1s
+
+  # Optional fields to be added to each event
+  #fields:
+  #  datacenter: west
 
   # Network type to be used for redis connection. Default: tcp
   #network: tcp
@@ -497,60 +442,51 @@ filebeat.prospectors:
   # Max number of concurrent connections. Default: 10
   #maxconn: 10
 
+  # Filters can be used to reduce the number of fields sent.
+  #processors:
+  #  - include_fields:
+  #      fields: ["beat", "metricset", "redis.info.stats"]
+
   # Redis AUTH password. Empty by default.
   #password: foobared
 
-#------------------------------ Udp prospector --------------------------------
-# Experimental: Config options for the udp prospector
-#- type: udp
+#-------------------------------- uwsgi Module -------------------------------
+- module: uwsgi
+  metricsets: ["status"]
+  period: 10s
+  hosts: ["tcp://127.0.0.1:9191"]
 
-  # Maximum size of the message received over UDP
-  #max_message_size: 10240
+#------------------------------- vSphere Module ------------------------------
+- module: vsphere
+  metricsets: ["datastore", "host", "virtualmachine"]
+  period: 10s
+  hosts: ["https://localhost/sdk"]
 
-#========================== Filebeat autodiscover ==============================
+  username: "user"
+  password: "password"
+  # If insecure is true, don't verify the server's certificate chain
+  insecure: false
+  # Get custom fields when using virtualmachine metric set. Default false.
+  # get_custom_fields: false
+  
 
-# Autodiscover allows you to detect changes in the system and spawn new modules
-# or prospectors as they happen.
+#------------------------------- Windows Module ------------------------------
+- module: windows
+  metricsets: ["perfmon"]
+  period: 10s
+  perfmon.counters:
 
-#filebeat.autodiscover:
-  # List of enabled autodiscover providers
-#  providers:
-#    - type: docker
-#      templates:
-#        - condition:
-#            equals.docker.container.image: busybox
-#          config:
-#            - type: log
-#              paths:
-#                - /var/lib/docker/containers/${data.docker.container.id}/*.log
+- module: windows
+  metricsets: ["service"]
+  period: 60s
 
-#========================= Filebeat global options ============================
+#------------------------------ ZooKeeper Module -----------------------------
+- module: zookeeper
+  metricsets: ["mntr"]
+  period: 10s
+  hosts: ["localhost:2181"]
 
-# Name of the registry file. If a relative path is used, it is considered relative to the
-# data path.
-#filebeat.registry_file: ${path.data}/registry
 
-# These config files must have the full filebeat config part inside, but only
-# the prospector part is processed. All global options like spool_size are ignored.
-# The config_dir MUST point to a different directory then where the main filebeat config file is in.
-#filebeat.config_dir:
-
-# How long filebeat waits on shutdown for the publisher to finish.
-# Default is 0, not waiting.
-#filebeat.shutdown_timeout: 0
-
-# Enable filebeat config reloading
-#filebeat.config:
-  #prospectors:
-    #enabled: false
-    #path: prospectors.d/*.yml
-    #reload.enabled: true
-    #reload.period: 10s
-  #modules:
-    #enabled: false
-    #path: modules.d/*.yml
-    #reload.enabled: true
-    #reload.period: 10s
 
 #================================ General ======================================
 
@@ -669,7 +605,7 @@ filebeat.prospectors:
 
 #============================= Elastic Cloud ==================================
 
-# These settings simplify using filebeat with the Elastic Cloud (https://cloud.elastic.co/).
+# These settings simplify using metricbeat with the Elastic Cloud (https://cloud.elastic.co/).
 
 # The cloud.id setting overwrites the `output.elasticsearch.hosts` and
 # `setup.kibana.host` options.
@@ -711,10 +647,10 @@ output.elasticsearch:
   # Number of workers per Elasticsearch host.
   #worker: 1
 
-  # Optional index name. The default is "filebeat" plus date
-  # and generates [filebeat-]YYYY.MM.DD keys.
+  # Optional index name. The default is "metricbeat" plus date
+  # and generates [metricbeat-]YYYY.MM.DD keys.
   # In case you modify this pattern you must update setup.template.name and setup.template.pattern accordingly.
-  #index: "filebeat-%{[beat.version]}-%{+yyyy.MM.dd}"
+  #index: "metricbeat-%{[beat.version]}-%{+yyyy.MM.dd}"
 
   # Optional ingest node pipeline. By default no pipeline will be used.
   #pipeline: ""
@@ -811,9 +747,9 @@ output.elasticsearch:
   # if no error is encountered.
   #slow_start: false
 
-  # Optional index name. The default index name is set to filebeat
+  # Optional index name. The default index name is set to metricbeat
   # in all lowercase.
-  #index: 'filebeat'
+  #index: 'metricbeat'
 
   # SOCKS5 proxy server URL
   #proxy_url: socks5://user:password@socks5-server:2233
@@ -892,7 +828,7 @@ output.elasticsearch:
   #username: ''
   #password: ''
 
-  # Kafka version filebeat is assumed to run against. Defaults to the oldest
+  # Kafka version metricbeat is assumed to run against. Defaults to the oldest
   # supported stable version (currently version 0.8.2.0)
   #version: 0.8.2
 
@@ -1008,8 +944,8 @@ output.elasticsearch:
   #port: 6379
 
   # The name of the Redis list or channel the events are published to. The
-  # default is filebeat.
-  #key: filebeat
+  # default is metricbeat.
+  #key: metricbeat
 
   # The password to authenticate with. The default is no authentication.
   #password:
@@ -1101,14 +1037,14 @@ output.elasticsearch:
 
   # Path to the directory where to save the generated files. The option is
   # mandatory.
-  #path: "/tmp/filebeat"
+  #path: "/tmp/metricbeat"
 
-  # Name of the generated files. The default is `filebeat` and it generates
-  # files: `filebeat`, `filebeat.1`, `filebeat.2`, etc.
-  #filename: filebeat
+  # Name of the generated files. The default is `metricbeat` and it generates
+  # files: `metricbeat`, `metricbeat.1`, `metricbeat.2`, etc.
+  #filename: metricbeat
 
   # Maximum size in kilobytes of each file. When this size is reached, and on
-  # every filebeat restart, the files are rotated. The default value is 10240
+  # every metricbeat restart, the files are rotated. The default value is 10240
   # kB.
   #rotate_every_kb: 10000
 
@@ -1131,26 +1067,26 @@ output.elasticsearch:
 
 #================================= Paths ======================================
 
-# The home path for the filebeat installation. This is the default base path
+# The home path for the metricbeat installation. This is the default base path
 # for all other path settings and for miscellaneous files that come with the
 # distribution (for example, the sample dashboards).
 # If not set by a CLI flag or in the configuration file, the default for the
 # home path is the location of the binary.
 #path.home:
 
-# The configuration path for the filebeat installation. This is the default
+# The configuration path for the metricbeat installation. This is the default
 # base path for configuration files, including the main YAML configuration file
 # and the Elasticsearch template file. If not set by a CLI flag or in the
 # configuration file, the default for the configuration path is the home path.
 #path.config: ${path.home}
 
-# The data path for the filebeat installation. This is the default base path
-# for all the files in which filebeat needs to store its data. If not set by a
+# The data path for the metricbeat installation. This is the default base path
+# for all the files in which metricbeat needs to store its data. If not set by a
 # CLI flag or in the configuration file, the default for the data path is a data
 # subdirectory inside the home path.
 #path.data: ${path.home}/data
 
-# The logs path for a filebeat installation. This is the default location for
+# The logs path for a metricbeat installation. This is the default location for
 # the Beat's log files. If not set by a CLI flag or in the configuration file,
 # the default for the logs path is a logs subdirectory inside the home path.
 #path.logs: ${path.home}/logs
@@ -1176,7 +1112,7 @@ output.elasticsearch:
 # In case the archive contains the dashboards from multiple Beats, this lets you
 # select which one to load. You can load all the dashboards in the archive by
 # setting this to the empty string.
-#setup.dashboards.beat: filebeat
+#setup.dashboards.beat: metricbeat
 
 # The name of the Kibana index to use for setting the configuration. Default is ".kibana"
 #setup.dashboards.kibana_index: .kibana
@@ -1198,14 +1134,14 @@ output.elasticsearch:
 # Set to false to disable template loading.
 #setup.template.enabled: true
 
-# Template name. By default the template name is "filebeat-%{[beat.version]}"
+# Template name. By default the template name is "metricbeat-%{[beat.version]}"
 # The template name and pattern has to be set in case the elasticsearch index pattern is modified.
-#setup.template.name: "filebeat-%{[beat.version]}"
+#setup.template.name: "metricbeat-%{[beat.version]}"
 
 # Template pattern. By default the template pattern is "-%{[beat.version]}-*" to apply to the default index settings.
 # The first part is the version of the beat and then -* is used to match all daily indices.
 # The template name and pattern has to be set in case the elasticsearch index pattern is modified.
-#setup.template.pattern: "filebeat-%{[beat.version]}-*"
+#setup.template.pattern: "metricbeat-%{[beat.version]}-*"
 
 # Path to fields.yml file to generate the template
 #setup.template.fields: "${path.config}/fields.yml"
@@ -1302,7 +1238,7 @@ setup.kibana:
 # Send all logging output to Windows Event Logs. The default is false.
 #logging.to_eventlog: false
 
-# If enabled, filebeat periodically logs its internal metrics that have changed
+# If enabled, metricbeat periodically logs its internal metrics that have changed
 # in the last period. For each metric that changed, the delta from the value at
 # the beginning of the period is logged. Also, the total values for
 # all non-zero internal metrics are logged on shutdown. The default is true.
@@ -1317,10 +1253,10 @@ logging.to_files: true
 logging.files:
   # Configure the path where the logs are written. The default is the logs directory
   # under the home path (the binary location).
-  #path: /var/log/filebeat
+  #path: /var/log/metricbeat
 
   # The name of the files where the logs are written to.
-  #name: filebeat
+  #name: metricbeat
 
   # Configure log file size limit. If limit is reached, log file will be
   # automatically rotated
@@ -1338,7 +1274,7 @@ logging.files:
 
 
 #============================== Xpack Monitoring =====================================
-# filebeat can export internal metrics to a central Elasticsearch monitoring cluster.
+# metricbeat can export internal metrics to a central Elasticsearch monitoring cluster.
 # This requires xpack monitoring to be enabled in Elasticsearch.
 # The reporting is disabled by default.
 

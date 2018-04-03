@@ -1,22 +1,30 @@
 - module: system
-  # Syslog
-  syslog:
-    enabled: true
+  period: 20s
+  metricsets:
+    - cpu
+    - load
+    - memory
+    - network
+    - process
+    - process_summary
+    - core
+    - diskio
+    #- socket
+  processes: ['.*']
+  process.include_top_n:
+    by_cpu: 5      # include top 5 processes by CPU
+    by_memory: 5   # include top 5 processes by memory
 
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    var.paths: ["/var/log/directadmin/*", "/var/log/messages"]
+- module: system
+  period: 1m
+  metricsets:
+    - filesystem
+    - fsstat
+  processors:
+  - drop_event.when.regexp:
+      system.filesystem.mount_point: '^/(sys|cgroup|proc|dev|etc|host|lib)($|/)'
 
-    # Convert the timestamp to UTC. Requires Elasticsearch >= 6.1.
-    #var.convert_timezone: false
-
-  # Authorization logs
-  auth:
-    enabled: true
-
-    # Set custom paths for the log files. If left empty,
-    # Filebeat will choose the paths depending on your OS.
-    var.paths: ["/var/log/directadmin/security.log", "/var/log/secure"]
-
-    # Convert the timestamp to UTC. Requires Elasticsearch >= 6.1.
-    #var.convert_timezone: false
+- module: system
+  period: 15m
+  metricsets:
+    - uptime
