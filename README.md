@@ -5,6 +5,18 @@ Elastic Logstash Kibana configuration
 # Beats Config
 Filebeat, Metricbeat, Auditbeat and Winlogbeat configuration
 
+Upload files via FTP
+run
+```
+cd ~
+sudo cp -R metricbeat/* /etc/metricbeat/
+sudo cp -R filebeat/* /etc/filebeat/
+sudo cp -R auditbeat/* /etc/auditbeat/
+sudo systemctl restart metricbeat
+sudo systemctl restart filebeat
+sudo systemctl restart auditbeat
+```
+
 ## Filebeat
 
 ## Metricbeat
