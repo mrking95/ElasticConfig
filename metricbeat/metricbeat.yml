@@ -36,7 +36,7 @@ setup.kibana:
   #password: "changeme"
 
 output.logstash:
-  hosts: ["136.144.174.200:5044"]
+  hosts: ["IP:5044"]
   ssl.certificate_authorities: ["/etc/pki/tls/certs/logstash-forwarder.crt"]
 
 #================================ Logging =====================================
